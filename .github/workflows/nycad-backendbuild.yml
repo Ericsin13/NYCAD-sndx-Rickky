@@ -1,0 +1,62 @@
+name: Backend Build, Test & Push to ECR
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+    paths:
+      - 'backend/**'
+      - '.github/workflows/nycad-backendbuild.yml'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  BACKEND_REPO: backend-repo
+
+jobs:
+  build-test-push-backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run backend lint
+        working-directory: backend
+        run: npm run lint --if-present
+
+      - name: Run backend tests
+        working-directory: backend
+        run: npm test --if-present
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com
+
+      - name: Build backend Docker image
+        run: |
+          docker build -t $BACKEND_REPO ./backend
+          docker tag $BACKEND_REPO:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:latest
+
+      - name: Push backend Docker image to ECR
+        run: |
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:latest
