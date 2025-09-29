@@ -2,7 +2,7 @@ name: Frontend Build, Test & Push to ECR
 
 on:
   push:
-    branches: ['main' , 'checkers']
+    branches: ['main']
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-ecr.yml'
