@@ -3,15 +3,17 @@ name: Frontend Build, Test & Push to ECR
 on:
   push:
     branches: ['main']
+  pull_request:
+    branches: ['main']
     paths:
       - 'frontend/**'
-      - '.github/workflows/frontend-ecr.yml'
+      - '.github/workflows/nycad-frontendbuild.yml'
   workflow_dispatch:
  
 
 env:
   AWS_REGION: us-east-1
-  FRONTEND_REPO: frontend-repo
+  FRONTEND_REPO: nycad-frontend-repo
 
 jobs:
   build-test-push-frontend:
