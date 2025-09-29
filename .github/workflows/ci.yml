@@ -1,6 +1,7 @@
 name: CI Workflow
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "main" ]
   pull_request:
@@ -8,7 +9,6 @@ on:
 
 jobs:
   backend:
-   
     name: Backend Tests
     runs-on: ubuntu-latest
     services:
@@ -46,6 +46,7 @@ jobs:
           npm test
 
   frontend:
+  
     name: Frontend Build & Tests
     runs-on: ubuntu-latest
 
