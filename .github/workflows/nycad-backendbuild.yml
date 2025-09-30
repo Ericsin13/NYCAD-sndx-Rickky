@@ -54,7 +54,7 @@ jobs:
 
       - name: Build backend Docker image
         run: |
-          docker build -t nycad-backend-repo .
+          docker build -t nycad-backend-repo ./backend
           docker tag nycad-backend-repo:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-backend-repo:latest
 
       - name: Push backend Docker image to ECR
