@@ -43,7 +43,7 @@ jobs:
         run: npm ci
 
       - name: Run npm audit (fail on high)
-        working-directory: frontend
+        working-directory: backend
         run: npm audit --audit-level=high
 
       - name: Run backend lint
