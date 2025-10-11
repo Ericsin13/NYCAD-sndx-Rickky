@@ -8,6 +8,8 @@ on:
     paths:
       - 'backend/**'
       - '.github/workflows/nycad-backendbuild.yml'
+  schedule:
+      - cron: '30 4 * * 0'
   workflow_dispatch:
 
 env:
@@ -39,6 +41,10 @@ jobs:
       - name: Install backend dependencies
         working-directory: backend
         run: npm ci
+
+      - name: Run npm audit (fail on high)
+        working-directory: frontend
+        run: npm audit --audit-level=high
 
       - name: Run backend lint
         working-directory: backend
