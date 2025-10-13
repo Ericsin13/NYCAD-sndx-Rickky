@@ -9,7 +9,7 @@ on:
       - 'backend/**'
       - '.github/workflows/nycad-backendbuild.yml'
   schedule:
-      - cron: '30 4 * * 0'
+      - cron: '* 3 * * *'
   workflow_dispatch:
 
 env:
