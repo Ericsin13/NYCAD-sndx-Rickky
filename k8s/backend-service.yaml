@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: nycad-app
+  labels:
+    app: nycad-backend
+spec:
+  selector:
+    app: nycad-backend
+  ports:
+    - name: http
+      port: 4000
+      targetPort: 4000
+  type: ClusterIP
+

@@ -14,7 +14,11 @@ on:
 
 env:
   AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }} 
   BACKEND_REPO: nycad-backend-repo
+  EKS_CLUSTER: ${{ secrets.EKS_CLUSTER }}
+  k8S_NAMESPACE: backend
+  k8S_MANIFEST_DIR: k8s
 
 jobs:
   build-test-push-backend:
@@ -88,3 +92,42 @@ jobs:
       - name: Push backend Docker image to ECR
         run: |
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-backend-repo:latest
+
+      - name: login to dockerhub 
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: push image to dockerhub 
+          run: |
+            docker push ${{ secrets.DOCKERHUB_USERNAME }}/nycad-backend-repo:latest
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER }} 
+
+      - name: install kubectl
+        run: |
+          curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.33.5/2025-09-19/bin/linux/arm64/kubectl
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+
+      - name: Create/update DB secret from GitHub secrets and apply backend manifests
+        run: |
+          # create secret (idempotent)
+          kubectl create secret generic db-credentials \
+            --namespace ${{ env.K8S_NAMESPACE }} \
+            --from-literal=DB_HOST='${{ secrets.DB_HOST }}' \
+            --from-literal=DB_PORT='${{ secrets.DB_PORT }}' \
+            --from-literal=DB_USER='${{ secrets.DB_USER }}' \
+            --from-literal=DB_PASSWORD='${{ secrets.DB_PASSWORD }}' \
+            --from-literal=DB_NAME='${{ secrets.DB_NAME }}' \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/backend-deployment.yaml
+          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/backend-service.yaml
+
+      - name: Update backend deployment image
+        run: |
+          IMAGE=${{ needs.build-and-push.outputs.image }}
+          kubectl -n ${{ env.K8S_NAMESPACE }} set image deployment/backend-deployment backend=$IMAGE
+          kubectl -n ${{ env.K8S_NAMESPACE }} rollout status deployment/backend-deployment --timeout=180s

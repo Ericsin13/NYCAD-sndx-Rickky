@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  namespace: nycad-app
+  labels:
+    app: nycad-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nycad-frontend
+  template:
+    metadata:
+      labels:
+        app: nycad-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: 826396126276.dkr.ecr.us-east-1.amazonaws.com/nycad-frontend-repo
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: VITE_API_BASE
+              value: "http://backend-service.nycad-app.svc.cluster.local:4000"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+

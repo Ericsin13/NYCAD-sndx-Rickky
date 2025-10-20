@@ -1,0 +1,91 @@
+name: Install AWS Load Balancer Controller
+
+on:
+  workflow_dispatch:  # manual trigger from GitHub Actions tab
+
+env:
+  CLUSTER_NAME: nycad-cluster
+  AWS_REGION: us-east-1
+  SERVICE_ACCOUNT_NAME: aws-load-balancer-controller
+  POLICY_NAME: AWSLoadBalancerControllerIAMPolicy
+  NAMESPACE: kube-system
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+
+      - name: Associate IAM OIDC provider for cluster
+        run: |
+          eksctl utils associate-iam-oidc-provider \
+            --region $AWS_REGION \
+            --cluster $CLUSTER_NAME \
+            --approve
+
+      - name: Download IAM policy JSON
+        run: |
+          curl -o iam_policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json
+
+      - name: Create IAM Policy (idempotent)
+        run: |
+          set +e
+          aws iam create-policy \
+            --policy-name $POLICY_NAME \
+            --policy-document file://iam_policy.json
+          if [ $? -ne 0 ]; then
+            echo "Policy probably exists already, continuing..."
+          fi
+          set -e
+
+      - name: Get AWS Account ID
+        id: account
+        run: |
+          echo "account=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_OUTPUT
+
+      - name: Create service account with IAM policy (IRSA)
+        run: |
+          eksctl create iamserviceaccount \
+            --cluster $CLUSTER_NAME \
+            --namespace $NAMESPACE \
+            --name $SERVICE_ACCOUNT_NAME \
+            --attach-policy-arn arn:aws:iam::${{ steps.account.outputs.account }}:policy/$POLICY_NAME \
+            --override-existing-serviceaccounts \
+            --approve
+
+      - name: Add and update Helm repo
+        run: |
+          helm repo add eks https://aws.github.io/eks-charts
+          helm repo update
+
+      - name: Install AWS Load Balancer Controller via Helm
+        run: |
+          VPC_ID=$(aws eks describe-cluster --name $CLUSTER_NAME --query "cluster.resourcesVpcConfig.vpcId" --output text)
+          echo "Detected VPC: $VPC_ID"
+
+          helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
+            -n $NAMESPACE \
+            --set clusterName=$CLUSTER_NAME \
+            --set serviceAccount.create=false \
+            --set serviceAccount.name=$SERVICE_ACCOUNT_NAME \
+            --set region=$AWS_REGION \
+            --set vpcId=$VPC_ID
+
+      - name: Verify installation
+        run: |
+          kubectl get deployment -n kube-system aws-load-balancer-controller
+          kubectl get pods -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller
+
