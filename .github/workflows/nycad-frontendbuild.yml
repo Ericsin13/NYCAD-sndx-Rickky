@@ -95,21 +95,23 @@ jobs:
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER }}
 
-      - name: Setup kubectl
+      - name: Install kubectl (correct arch)
         run: |
-          curl -LO https://s3.us-west-2.amazonaws.com/amazon-eks/1.33.5/2025-09-19/bin/linux/arm64/kubectl
-          chmod +x kubectl
-          sudo mv kubectl /usr/local/bin
+          ARCH=$(uname -m)
+          if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; fi
+          curl -LO "https://s3.us-west-2.amazonaws.com/amazon-eks/1.33.5/2025-09-19/bin/linux/${ARCH}/kubectl"
+          chmod +x ./kubectl
+          sudo mv ./kubectl /usr/local/bin/kubectl
+          kubectl version --client
 
       - name: Apply namespace and manifests
         run: |
-          kubectl apply -f k8s/namespace.yaml
-          kubectl apply -f k8s/frontend-deployment.yaml
-          kubectl apply -f k8s/frontend-service.yaml
-          kubectl apply -f k8s/ingress.yaml
+          kubectl create namespace ${{ env.K8S_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/namespace.yaml
+          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/frontend-deployment.yaml
+          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/frontend-service.yaml
+          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/ingress.yaml
 
-      - name: Update frontend image
+      - name: Verify rollout
         run: |
-          IMAGE=${{ needs.build-and-push.outputs.image }}
-          kubectl -n ${{ env.K8S_NAMESPACE }} set image deployment/frontend-deployment frontend=${{ needs.build-test-push.outputs.image_uri }}
           kubectl -n ${{ env.K8S_NAMESPACE }} rollout status deployment/frontend-deployment --timeout=180s
