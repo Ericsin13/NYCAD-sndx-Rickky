@@ -123,8 +123,9 @@ jobs:
             --from-literal=DB_PASSWORD='${{ secrets.DB_PASSWORD }}' \
             --from-literal=DB_NAME='${{ secrets.DB_NAME }}' \
             --dry-run=client -o yaml | kubectl apply -f -
-          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/backend-deployment.yaml
-          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/backend-service.yaml
+          kubectl apply -f k8s/backend-secrets.yaml  
+          kubectl apply -f k8s/backend-deployment.yaml
+          kubectl apply -f k8s/backend-service.yaml
 
       - name: Update backend deployment image
         run: |

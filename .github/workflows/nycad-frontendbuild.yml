@@ -93,7 +93,7 @@ jobs:
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:latest
 
       - name: login to dockerhub 
-        uses: docker/login-action@v6
+        uses: docker/login-action@v2
         with: |
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
@@ -113,10 +113,10 @@ jobs:
 
       - name: Apply namespace and manifests
         run: |
-          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/namespace-frontend.yaml
-          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/frontend-deployment.yaml
-          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/frontend-service.yaml
-          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/ingress.yaml
+          kubectl apply -f k8s/namespace-frontend.yaml
+          kubectl apply -f k8s/frontend-deployment.yaml
+          kubectl apply -f k8s/frontend-service.yaml
+          kubectl apply -f k8s/ingress.yaml
 
       - name: Update frontend image
         run: |
