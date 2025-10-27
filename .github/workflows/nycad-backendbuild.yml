@@ -18,7 +18,7 @@ env:
   BACKEND_REPO: nycad-backend-repo
   EKS_CLUSTER: ${{ secrets.EKS_CLUSTER }}
   k8S_NAMESPACE: backend
-  k8S_MANIFEST_DIR: k8s
+  k8S_MANIFEST_DIR: K8S
 
 jobs:
   build-test-push-backend:
@@ -107,10 +107,10 @@ jobs:
 
       - name: Create or update DB secret and deploy backend
         run: |
-          kubectl create namespace ${{ env.K8S_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create namespace nycad --dry-run=client -o yaml | kubectl apply -f -
 
           kubectl create secret generic db-credentials \
-            --namespace ${{ env.K8S_NAMESPACE }} \
+            --namespace nycad \
             --from-literal=DB_HOST='${{ secrets.DB_HOST }}' \
             --from-literal=DB_PORT='${{ secrets.DB_PORT }}' \
             --from-literal=DB_USER='${{ secrets.DB_USER }}' \
@@ -118,9 +118,10 @@ jobs:
             --from-literal=DB_NAME='${{ secrets.DB_NAME }}' \
             --dry-run=client -o yaml | kubectl apply -f -
 
-          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/backend-deployment.yaml
-          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/backend-service.yaml
+          kubectl apply -f K8s/backend/db-secrets.yml -n nycad  
+          kubectl apply -f K8s/backend/backend-deployment.yaml -n nycad
+          kubectl apply -f K8s/backend/backend-service.yaml -n nycad
 
       - name: Verify rollout
         run: |
-          kubectl -n ${{ env.K8S_NAMESPACE }} rollout status deployment/backend-deployment --timeout=180s
+          kubectl -n nycad rollout status deployment/backend-deployment --timeout=180s
