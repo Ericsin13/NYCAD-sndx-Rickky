@@ -113,4 +113,10 @@ jobs:
 
       - name: Verify rollout
         run: |
-          kubectl -n nycad-app rollout status deployment/frontend-deployment --timeout=180s
+          set -e
+          kubectl -n nycad-app rollout status deployment/frontend-deployment --timeout=600s || (
+            kubectl -n nycad-app get pods -l app=frontend -o wide
+            kubectl -n nycad-app describe deployment frontend-deployment
+            kubectl -n nycad-app get events --sort-by=.metadata.creationTimestamp | tail -n 20
+            exit 1
+          )
