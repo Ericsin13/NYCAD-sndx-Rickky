@@ -17,8 +17,8 @@ env:
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }} 
   BACKEND_REPO: nycad-backend-repo
   EKS_CLUSTER: ${{ secrets.EKS_CLUSTER }}
-  k8S_NAMESPACE: backend
-  k8S_MANIFEST_DIR: K8S
+  k8S_NAMESPACE: nycad-app
+  k8S_MANIFEST_DIR: k8s
 
 jobs:
   build-test-push-backend:
