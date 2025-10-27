@@ -118,7 +118,7 @@ jobs:
             --from-literal=DB_NAME='${{ secrets.DB_NAME }}' \
             --dry-run=client -o yaml | kubectl apply -f -
 
-          kubectl apply -f k8s/backend/db-secret.yml -n nycad-app
+          kubectl apply -f k8s/backend/db-secrets.yaml -n nycad-app
           kubectl apply -f k8s/backend/backend-deployment.yaml -n nycad-app
           kubectl apply -f k8s/backend/backend-service.yaml -n nycad-app
 
