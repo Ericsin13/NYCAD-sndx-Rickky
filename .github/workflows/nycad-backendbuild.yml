@@ -18,7 +18,7 @@ env:
   BACKEND_REPO: nycad-backend-repo
   EKS_CLUSTER: ${{ secrets.EKS_CLUSTER }}
   k8S_NAMESPACE: nycad-app
-  k8S_MANIFEST_DIR: K8s
+  k8S_MANIFEST_DIR: k8s
 
 jobs:
   build-test-push-backend:
@@ -118,9 +118,9 @@ jobs:
             --from-literal=DB_NAME='${{ secrets.DB_NAME }}' \
             --dry-run=client -o yaml | kubectl apply -f -
 
-          kubectl apply -f K8s/backend/db-secrets.yml -n nycad-app
-          kubectl apply -f K8s/backend/backend-deployment.yaml -n nycad-app
-          kubectl apply -f K8s/backend/backend-service.yaml -n nycad-app
+          kubectl apply -f k8s/backend/db-secret.yml -n nycad-app
+          kubectl apply -f k8s/backend/backend-deployment.yaml -n nycad-app
+          kubectl apply -f k8s/backend/backend-service.yaml -n nycad-app
 
       - name: Verify rollout
         run: |

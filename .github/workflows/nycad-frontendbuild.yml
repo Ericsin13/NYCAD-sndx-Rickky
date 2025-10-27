@@ -17,7 +17,7 @@ env:
   FRONTEND_REPO: nycad-frontend-repo
   EKS_CLUSTER: ${{ secrets.EKS_CLUSTER }}
   K8S_NAMESPACE: nycad-app
-  k8S_MANIFEST_DIR: K8s
+  k8S_MANIFEST_DIR: k8s
 
 jobs:
   build-test-push-frontend:
@@ -107,9 +107,9 @@ jobs:
       - name: Apply namespace and manifests
         run: |
           kubectl create namespace nycad-app --dry-run=client -o yaml | kubectl apply -f -
-          kubectl apply -f K8s/frontend/frontend-deployment.yaml -n nycad-app
-          kubectl apply -f K8s/frontend/frontend-service.yaml -n nycad-app
-          kubectl apply -f K8s/frontend/ingress.yaml -n nycad-app
+          kubectl apply -f k8s/frontend/frontend-deployment.yaml -n nycad-app
+          kubectl apply -f k8s/frontend/frontend-service.yaml -n nycad-app
+          kubectl apply -f k8s/frontend/ingress.yaml -n nycad-app
 
       - name: Verify rollout
         run: |
