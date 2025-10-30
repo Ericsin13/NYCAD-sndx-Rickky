@@ -104,6 +104,11 @@ jobs:
           sudo mv ./kubectl /usr/local/bin/kubectl
           kubectl version --client
 
+      - name: Replace placeholders in manifests
+        run: |
+          sed -i "s|\${AWS_ACCOUNT_ID}|${AWS_ACCOUNT_ID}|g" k8s/frontend/frontend-deployment.yaml
+          sed -i "s|\${AWS_REGION}|${AWS_REGION}|g" k8s/frontend/frontend-deployment.yaml
+
       - name: Apply namespace and manifests
         run: |
           kubectl create namespace nycad-app --dry-run=client -o yaml | kubectl apply -f -
