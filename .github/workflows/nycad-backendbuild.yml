@@ -67,7 +67,7 @@ jobs:
 
       - name: Login to Amazon ECR
         run: |
-          aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com
       
       - name: Set image tag
         id: vars
@@ -75,8 +75,8 @@ jobs:
 
       - name: Build backend Docker image
         run: |
-          docker build -t nycad-backend-repo:$TAG ./backend
-        docker tag nycad-backend-repo:$TAG ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/nycad-backend-repo:$TAG
+          docker build -t nycad-backend-repo:TAG ./backend 
+          docker tag $BACKEND_REPO:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$BACKEND_REPO:latest
 
       - name: Run Trivy vulnerability scan on image
         uses: aquasecurity/trivy-action@master
@@ -95,7 +95,7 @@ jobs:
           
       - name: Push backend Docker image to ECR
         run: |
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/nycad-backend-repo:$TAG
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:latest
 
       - name: Update kubeconfig for EKS cluster
         run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER }}
