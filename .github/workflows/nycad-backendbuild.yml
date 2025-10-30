@@ -68,10 +68,14 @@ jobs:
       - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com
+      
+      - name: Set image tag
+        id: vars
+        run: echo "TAG=$(date +%s)" >> $GITHUB_ENV    
 
       - name: Build backend Docker image
         run: |
-          docker build -t nycad-backend-repo ./backend
+          docker build -t nycad-backend-repo:latest ./backend
           docker tag nycad-backend-repo:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-backend-repo:latest
 
       - name: Run Trivy vulnerability scan on image
@@ -111,16 +115,23 @@ jobs:
 
           kubectl create secret generic db-credentials \
             --namespace nycad-app \
-            --from-literal=DB_HOST='${{ secrets.DB_HOST }}' \
-            --from-literal=DB_PORT='${{ secrets.DB_PORT }}' \
-            --from-literal=DB_NAME='${{ secrets.DB_NAME }}' \
-            --from-literal=DB_USERNAME='${{ secrets.DB_USERNAME }}' \
-            --from-literal=DB_PASSWORD='${{ secrets.DB_PASSWORD }}' \
+            --from-literal=DB_HOST=${{ secrets.DB_HOST }} \
+            --from-literal=DB_PORT=${{ secrets.DB_PORT }} \
+            --from-literal=DB_NAME=${{ secrets.DB_NAME }} \
+            --from-literal=DB_USERNAME=${{ secrets.DB_USERNAME }} \
+            --from-literal=DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
           kubectl apply -f k8s/backend/db-secrets.yaml -n nycad-app
           kubectl apply -f k8s/backend/backend-deployment.yaml -n nycad-app
           kubectl apply -f k8s/backend/backend-service.yaml -n nycad-app
+
+      - name: Update backend image in Kubernetes deployment
+        run: |
+          kubectl set image deployment/backend-deployment \
+            backend=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-backend-repo:$TAG \
+            -n nycad-app
+
 
       - name: Verify rollout
         run: |
