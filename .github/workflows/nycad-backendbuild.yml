@@ -67,17 +67,11 @@ jobs:
 
       - name: Login to Amazon ECR
         run: |
-          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com
-      
-      - name: Set image tag
-        id: vars
-        run: echo "TAG=$(date +%s)" >> $GITHUB_ENV    
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com   
 
       - name: Build backend Docker image
         run: |
-          echo "TAG=$(date +%s)" >> $GITHUB_ENV
-          echo "Building image with tag: latest"
-          docker build -t nycad-backend-repo:latest ./backend 
+          docker build -t $BACKEND_REPO:latest ./backend 
           docker tag $BACKEND_REPO:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$BACKEND_REPO:latest
 
       - name: Run Trivy vulnerability scan on image
