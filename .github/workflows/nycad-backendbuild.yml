@@ -75,6 +75,8 @@ jobs:
 
       - name: Build backend Docker image
         run: |
+          echo "TAG=$(date +%s)" >> $GITHUB_ENV
+          echo "Building image with tag: latest"
           docker build -t nycad-backend-repo:latest ./backend 
           docker tag $BACKEND_REPO:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$BACKEND_REPO:latest
 
@@ -98,7 +100,7 @@ jobs:
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:latest
 
       - name: Update kubeconfig for EKS cluster
-        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER }}
+        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER }}
 
       - name: Install kubectl (correct arch)
         run: |
@@ -129,7 +131,7 @@ jobs:
       - name: Update backend image in Kubernetes deployment
         run: |
           kubectl set image deployment/backend-deployment \
-            backend=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/nycad-backend-repo:$TAG \
+            backend=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND-REPO:latest \
             -n nycad-app
 
 
