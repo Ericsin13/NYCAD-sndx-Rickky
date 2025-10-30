@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: ${AWS_ACCOUNT_ID}.dkr.ecr.${{AWS_REGION}}.amazonaws.com/nycad-backend-repo:${TAG}
+          image: ${AWS_ACCOUNT_ID}.dkr.ecr.${{AWS_REGION}}.amazonaws.com/nycad-backend-repo:$TAG
           imagePullPolicy: Always
           ports:
             - containerPort: 4000
