@@ -67,7 +67,7 @@ jobs:
 
       - name: Login to Amazon ECR
         run: |
-          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com   
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{secrets.AWS_ACCOUNT_ID}}.dkr.ecr.$AWS_REGION.amazonaws.com   
 
       - name: Build backend Docker image
         run: |
@@ -91,7 +91,7 @@ jobs:
           
       - name: Push backend Docker image to ECR
         run: |
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:latest
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$BACKEND_REPO:latest
 
       - name: Update kubeconfig for EKS cluster
         run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER }}

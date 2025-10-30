@@ -66,12 +66,12 @@ jobs:
 
       - name: Login to Amazon ECR
         run: |
-          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com
 
       - name: Build frontend Docker image
         run: |
           docker build -t $FRONTEND_REPO ./frontend
-          docker tag $FRONTEND_REPO:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$FRONTEND_REPO:latest
+          docker tag $FRONTEND_REPO:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$FRONTEND_REPO:latest
 
       - name: Run Trivy vulnerability scan on image
         uses: aquasecurity/trivy-action@master
@@ -90,7 +90,7 @@ jobs:
           
       - name: Push frontend Docker image to ECR
         run: |
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:latest
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$FRONTEND_REPO:latest
 
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER }}
