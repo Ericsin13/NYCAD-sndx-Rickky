@@ -104,11 +104,6 @@ jobs:
       - name: Update kubeconfig for EKS
         run: aws eks update-kubeconfig --region $AWS_REGION --name ${{ env.EKS_CLUSTER }}
 
-      - name: Replace placeholders in manifests
-        run: |
-          sed -i "s|__AWS_ACCOUNT_ID__|${{ secrets.AWS_ACCOUNT_ID }}|g" ${{ env.K8S_MANIFEST_DIR }}/frontend-deployment.yaml
-          sed -i "s|__AWS_REGION__|${{ env.AWS_REGION }}|g" ${{ env.K8S_MANIFEST_DIR }}/frontend-deployment.yaml
-
       - name: Apply namespace and manifests
         run: |
           kubectl create namespace $K8S_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -

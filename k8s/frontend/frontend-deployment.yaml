@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: "__AWS_ACCOUNT_ID__.dkr.ecr.__AWS_REGION__.amazonaws.com/nycad-frontend-repo:latest"
+          image: '${secrets.AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/nycad-frontend-repo:latest'
           imagePullPolicy: Always
           ports:
             - containerPort: 80
@@ -48,4 +48,3 @@ spec:
             limits:
               cpu: "150m"
               memory: "96Mi"
-
