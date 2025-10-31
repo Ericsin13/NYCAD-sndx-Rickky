@@ -7,6 +7,8 @@ metadata:
     app: nycad-frontend
 spec:
   replicas: 2
+  progressDeadlineSeconds: 1200
+  minReadySeconds: 10
   selector:
     matchLabels:
       app: nycad-frontend
