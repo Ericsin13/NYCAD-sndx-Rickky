@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/nycad-frontend-repo:latest
+          image: "__AWS_ACCOUNT_ID__.dkr.ecr.__AWS_REGION__.amazonaws.com/nycad-frontend-repo:latest"
           imagePullPolicy: Always
           ports:
             - containerPort: 80
