@@ -13,7 +13,6 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  AWS_ID_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
   FRONTEND_REPO: nycad-frontend-repo
   EKS_CLUSTER: ${{ secrets.EKS_CLUSTER }}
   K8S_NAMESPACE: nycad-app
@@ -66,18 +65,17 @@ jobs:
 
       - name: Login to Amazon ECR
         run: |
-          aws ecr get-login-password --region $AWS_REGION | \
-          docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
 
       - name: Build frontend Docker image
         run: |
           docker build -t nycad-frontend-repo:latest ./frontend
-          docker tag nycad-frontend-repo:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-frontend-repo:latest
+          docker tag nycad-frontend-repo:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-frontend-repo:latest
 
       - name: Run Trivy vulnerability scan on image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: '${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.FRONTEND_REPO }}:latest'
+          image-ref: '${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.FRONTEND_REPO }}:latest'
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
@@ -92,7 +90,7 @@ jobs:
           
       - name: Push frontend Docker image to ECR
         run: |
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-frontend-repo:latest
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/nycad-frontend-repo:latest
 
       - name: Install kubectl (correct arch)
         run: |
@@ -104,22 +102,22 @@ jobs:
           kubectl version --client
 
       - name: Update kubeconfig for EKS
-        run: aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER
+        run: aws eks update-kubeconfig --region $AWS_REGION --name ${{ env.EKS_CLUSTER }}
 
       - name: Replace placeholders in manifests
         run: |
-          sed -i "s|\${AWS_ACCOUNT_ID}|$AWS_ACCOUNT_ID|g" $K8S_MANIFEST_DIR/frontend-deployment.yaml
-          sed -i "s|\${AWS_REGION}|$AWS_REGION|g" $K8S_MANIFEST_DIR/frontend-deployment.yaml
+          sed -i "s|\${{ secrets.AWS_ACCOUNT_ID }}|${{ secrets.AWS_ACCOUNT_ID }}|g" ${{ env.K8S_MANIFEST_DIR }}/frontend-deployment.yaml
+          sed -i "s|\${{ env.AWS_REGION }}|${{ env.AWS_REGION }}|g" ${{ env.K8S_MANIFEST_DIR }}/frontend-deployment.yaml
 
       - name: Apply namespace and manifests
         run: |
           kubectl create namespace $K8S_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
-          kubectl apply -f $k8S_MANIFEST_DIR/frontend-deployment.yaml -n $K8S_NAMESPACE
-          kubectl apply -f $k8S_MANIFEST_DIR/frontend-service.yaml -n $K8S_NAMESPACE
-          kubectl apply -f $k8S_MANIFEST_DIR/ingress.yaml -n $K8S_NAMESPACE
+          kubectl apply -f ${{ env.k8S_MANIFEST_DIR }}/frontend-deployment.yaml -n ${{ env.K8S_NAMESPACE }}
+          kubectl apply -f ${{ env.k8S_MANIFEST_DIR }}/frontend-service.yaml -n ${{ env.K8S_NAMESPACE }}
+          kubectl apply -f ${{ env.k8S_MANIFEST_DIR }}/ingress.yaml -n ${{ env.K8S_NAMESPACE }}
 
       - name: Verify rollout
         run: |
           set -e
-          kubectl rollout restart deployment frontend-deployment -n $K8S_NAMESPACE
-          kubectl -n $K8S_NAMESPACE rollout status deployment/frontend-deployment --timeout=600s 
+          kubectl rollout restart deployment frontend-deployment -n ${{ env.K8S_NAMESPACE }}
+          kubectl -n ${{ env.K8S_NAMESPACE }} rollout status deployment/frontend-deployment --timeout=600s 
