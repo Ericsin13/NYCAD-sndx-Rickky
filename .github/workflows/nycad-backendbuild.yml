@@ -16,8 +16,8 @@ env:
   AWS_REGION: us-east-1
   BACKEND_REPO: nycad-backend-repo
   EKS_CLUSTER: ${{ secrets.EKS_CLUSTER }}
-  k8S_NAMESPACE: nycad-app
-  k8S_MANIFEST_DIR: k8s/backend
+  K8S_NAMESPACE: nycad-app
+  K8S_MANIFEST_DIR: k8s/backend
 
 jobs:
   build-test-push-backend:
