@@ -92,7 +92,7 @@ jobs:
           
       - name: Push frontend Docker image to ECR
         run: |
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/${{ env.FRONTEND.REPO }}:latest
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-frontend-repo:latest
 
       - name: Update kubeconfig for EKS CLUSTER
         run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER }}
