@@ -67,13 +67,15 @@ jobs:
 
       - name: Login to Amazon ECR
         run: |
-          aws ecr get-login-password --region $AWS_REGION | \
-          docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
+          docker login --username AWS --password-stdin \
+          ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
 
       - name: Build backend Docker image
         run: |
           docker build -t nycad-backend-repo:latest ./backend 
-          docker tag nycad-backend-repo:latest $secrets.AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-backend-repo:latest
+          docker tag nycad-backend-repo:latest \
+          ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/nycad-backend-repo:latest
 
       - name: Run Trivy vulnerability scan on image
         uses: aquasecurity/trivy-action@master
@@ -93,7 +95,7 @@ jobs:
           
       - name: Push backend Docker image to ECR
         run: |
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-backend-repo:latest
+          docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-backend-repo:latest
 
       - name: Install kubectl (correct arch)
         run: |
@@ -109,8 +111,8 @@ jobs:
 
       - name: Replace placeholders in manifests
         run: |
-          sed -i "s|\${AWS_ACCOUNT_ID}|$AWS_ACCOUNT_ID|g" $k8S_MANIFEST_DIR/backend-deployment.yaml
-          sed -i "s|\${AWS_REGION}|$AWS_REGION|g" $K8S_MANIFEST_DIR/backend-deployment.yaml
+          sed -i "s|\${AWS_ACCOUNT_ID}|${{ env.AWS_ACCOUNT_ID }}|g" ${{ env.k8S_MANIFEST_DIR }}/backend-deployment.yaml
+          sed -i "s|\${AWS_REGION}|${{ env.AWS_REGION }}|g" ${{ env.K8S_MANIFEST_DIR }}/backend-deployment.yaml
 
       - name: Create or update DB secret and deploy backend
         run: |
