@@ -139,7 +139,7 @@ jobs:
           set -e
           kubectl delete rs -n nycad-app --all
           kubectl rollout restart deployment backend-deployment -n nycad-app
-          kubectl -n nycad-app rollout status deployment/backend-deployment --timeout=1200s || (
+          kubectl -n nycad-app rollout status deployment/backend-deployment --timeout=600s || (
             kubectl -n nycad-app get pods -l app=backend
             kubectl -n nycad-app describe deployment backend-deployment
             kubectl -n nycad-app get events --sort-by=.metadata.creationTimestamp | tail -n 20
