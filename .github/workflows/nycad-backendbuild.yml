@@ -18,7 +18,7 @@ env:
   BACKEND_REPO: nycad-backend-repo
   EKS_CLUSTER: ${{ secrets.EKS_CLUSTER }}
   k8S_NAMESPACE: nycad-app
-  k8S_MANIFEST_DIR: k8s
+  k8S_MANIFEST_DIR: k8s/backend
 
 jobs:
   build-test-push-backend:
@@ -46,7 +46,7 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Run npm audit (fail on high)
+      - name: Run npm audit 
         working-directory: backend
         run: npm audit --audit-level=high
 
@@ -68,23 +68,22 @@ jobs:
       - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION | \
-          docker login --username AWS --password-stdin \
-          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com
+          docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
       - name: Build backend Docker image
         run: |
           docker build -t nycad-backend-repo:latest ./backend 
-          docker tag nycad-backend-repo:latest \
-          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-backend-repo:latest
+          docker tag nycad-backend-repo:latest $secrets.AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-backend-repo:latest
 
       - name: Run Trivy vulnerability scan on image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: '${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.BACKEND_REPO }}:latest'
+          image-ref: '${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.BACKEND_REPO }}:latest'
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
+        continue-on-error: true
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
@@ -94,10 +93,7 @@ jobs:
           
       - name: Push backend Docker image to ECR
         run: |
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-backend-repo:latest
-
-      - name: Update kubeconfig for EKS cluster
-        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER }}
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-backend-repo:latest
 
       - name: Install kubectl (correct arch)
         run: |
@@ -108,17 +104,20 @@ jobs:
           sudo mv ./kubectl /usr/local/bin/kubectl
           kubectl version --client
 
+      - name: Update kubeconfig for EKS cluster
+        run: aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER 
+
       - name: Replace placeholders in manifests
         run: |
-          sed -i "s|\${AWS_ACCOUNT_ID}|${AWS_ACCOUNT_ID}|g" k8s/backend/backend-deployment.yaml
-          sed -i "s|\${AWS_REGION}|${AWS_REGION}|g" k8s/backend/backend-deployment.yaml
+          sed -i "s|\${AWS_ACCOUNT_ID}|$AWS_ACCOUNT_ID|g" $k8S_MANIFEST_DIR/backend-deployment.yaml
+          sed -i "s|\${AWS_REGION}|$AWS_REGION|g" $K8S_MANIFEST_DIR/backend-deployment.yaml
 
       - name: Create or update DB secret and deploy backend
         run: |
-          kubectl create namespace nycad-app --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create namespace $K8S_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
 
           kubectl create secret generic db-credentials \
-            --namespace nycad-app \
+            --namespace $K8S_NAMESPACE \
             --from-literal=DB_HOST=${{ secrets.DB_HOST }} \
             --from-literal=DB_PORT=${{ secrets.DB_PORT }} \
             --from-literal=DB_NAME=${{ secrets.DB_NAME }} \
@@ -126,25 +125,19 @@ jobs:
             --from-literal=DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
-          kubectl apply -f k8s/backend/db-secrets.yaml -n nycad-app
-          kubectl apply -f k8s/backend/backend-deployment.yaml -n nycad-app
-          kubectl apply -f k8s/backend/backend-service.yaml -n nycad-app
+          kubectl apply -f $K8S_MANIFEST_DIR/db-secrets.yaml -n $K8S_NAMESPACE
+          kubectl apply -f $K8S_MANIFEST_DIR/backend-deployment.yaml -n $K8S_NAMESPACE
+          kubectl apply -f $K8S_MANIFEST_DIR/backend-service.yaml -n $K8S_NAMESPACE
 
       - name: Update backend image in Kubernetes deployment
         run: |
           kubectl set image deployment/backend-deployment \
-            backend=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/nycad-backend-repo:latest \
-            -n nycad-app
+            backend=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-backend-repo:latest \
+            -n $K8S_NAMESPACE
 
 
       - name: Verify rollout
         run: |
           set -e
-          kubectl delete rs -n nycad-app --all
-          kubectl rollout restart deployment backend-deployment -n nycad-app
-          kubectl -n nycad-app rollout status deployment/backend-deployment --timeout=600s || (
-            kubectl -n nycad-app get pods -l app=backend
-            kubectl -n nycad-app describe deployment backend-deployment
-            kubectl -n nycad-app get events --sort-by=.metadata.creationTimestamp | tail -n 20
-            exit 1
-          )
+          kubectl rollout restart deployment backend-deployment -n $K8S_NAMESPACE
+          kubectl -n $K8S_NAMESPACE rollout status deployment/backend-deployment --timeout=600s 

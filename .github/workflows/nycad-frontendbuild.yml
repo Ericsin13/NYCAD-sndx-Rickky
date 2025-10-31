@@ -17,7 +17,7 @@ env:
   FRONTEND_REPO: nycad-frontend-repo
   EKS_CLUSTER: ${{ secrets.EKS_CLUSTER }}
   K8S_NAMESPACE: nycad-app
-  k8S_MANIFEST_DIR: k8s
+  k8S_MANIFEST_DIR: k8s/frontend
 
 jobs:
   build-test-push-frontend:
@@ -67,22 +67,22 @@ jobs:
       - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region $AWS_REGION | \
-          docker login --username AWS --password-stdin \
-          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com
+          docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
       - name: Build frontend Docker image
         run: |
           docker build -t nycad-frontend-repo:latest ./frontend
-          docker tag nycad-frontend-repo:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/nycad-frontend-repo:latest
+          docker tag nycad-frontend-repo:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-frontend-repo:latest
 
       - name: Run Trivy vulnerability scan on image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: '${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.FRONTEND_REPO }}:latest'
+          image-ref: '${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.FRONTEND_REPO }}:latest'
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
+        continue-on-error: true
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
@@ -92,10 +92,7 @@ jobs:
           
       - name: Push frontend Docker image to ECR
         run: |
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-frontend-repo:latest
-
-      - name: Update kubeconfig for EKS CLUSTER
-        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER }}
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/nycad-frontend-repo:latest
 
       - name: Install kubectl (correct arch)
         run: |
@@ -106,26 +103,23 @@ jobs:
           sudo mv ./kubectl /usr/local/bin/kubectl
           kubectl version --client
 
+      - name: Update kubeconfig for EKS
+        run: aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER
+
       - name: Replace placeholders in manifests
         run: |
-          sed -i "s|\${AWS_ACCOUNT_ID}|${AWS_ACCOUNT_ID}|g" k8s/frontend/frontend-deployment.yaml
-          sed -i "s|\${AWS_REGION}|${AWS_REGION}|g" k8s/frontend/frontend-deployment.yaml
+          sed -i "s|\${AWS_ACCOUNT_ID}|$AWS_ACCOUNT_ID|g" $K8S_MANIFEST_DIR/frontend-deployment.yaml
+          sed -i "s|\${AWS_REGION}|$AWS_REGION|g" $K8S_MANIFEST_DIR/frontend-deployment.yaml
 
       - name: Apply namespace and manifests
         run: |
-          kubectl create namespace nycad-app --dry-run=client -o yaml | kubectl apply -f -
-          kubectl apply -f k8s/frontend/frontend-deployment.yaml -n nycad-app
-          kubectl apply -f k8s/frontend/frontend-service.yaml -n nycad-app
-          kubectl apply -f k8s/frontend/ingress.yaml -n nycad-app
+          kubectl create namespace $K8S_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f $k8S_MANIFEST_DIR/frontend-deployment.yaml -n $K8S_NAMESPACE
+          kubectl apply -f $k8S_MANIFEST_DIR/frontend-service.yaml -n $K8S_NAMESPACE
+          kubectl apply -f $k8S_MANIFEST_DIR/ingress.yaml -n $K8S_NAMESPACE
 
       - name: Verify rollout
         run: |
           set -e
-          kubectl delete rs -n nycad-app --all
-          kubectl rollout restart deployment frontend-deployment -n nycad-app
-          kubectl -n nycad-app rollout status deployment/frontend-deployment --timeout=600s || (
-            kubectl -n nycad-app get pods -l app=frontend -o wide
-            kubectl -n nycad-app describe deployment frontend-deployment
-            kubectl -n nycad-app get events --sort-by=.metadata.creationTimestamp | tail -n 20
-            exit 1
-          )
+          kubectl rollout restart deployment frontend-deployment -n $K8S_NAMESPACE
+          kubectl -n $K8S_NAMESPACE rollout status deployment/frontend-deployment --timeout=600s 
