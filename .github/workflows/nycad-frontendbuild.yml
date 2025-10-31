@@ -66,12 +66,12 @@ jobs:
 
       - name: Login to Amazon ECR
         run: |
-          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_REGION.amazonaws.com
+          aws ecr get-login-password --region {{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
 
       - name: Build frontend Docker image
         run: |
-          docker build -t $FRONTEND_REPO ./frontend
-          docker tag $FRONTEND_REPO:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$FRONTEND_REPO:latest
+          docker build -t nycad-frontend-repo:latest ./frontend
+          docker tag nycad-frontend-repo:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/nycad-frontend-repo:latest
 
       - name: Run Trivy vulnerability scan on image
         uses: aquasecurity/trivy-action@master
@@ -90,7 +90,7 @@ jobs:
           
       - name: Push frontend Docker image to ECR
         run: |
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/$FRONTEND_REPO:latest
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/nycad-frontend-repo:latest
 
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER }}
@@ -107,7 +107,7 @@ jobs:
       - name: Replace placeholders in manifests
         run: |
           sed -i "s|\${AWS_ACCOUNT_ID}|${AWS_ACCOUNT_ID}|g" k8s/frontend/frontend-deployment.yaml
-          sed -i "s|\${AWS_REGION}|${AWS_REGION}|g" k8s/frontend/frontend-deployment.yaml
+          sed -i "s|\${AWS_REGION}|${AWS_REGION }|g" k8s/frontend/frontend-deployment.yaml
 
       - name: Apply namespace and manifests
         run: |
