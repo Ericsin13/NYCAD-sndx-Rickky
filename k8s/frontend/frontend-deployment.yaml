@@ -7,7 +7,7 @@ metadata:
     app: nycad-frontend
 spec:
   replicas: 2
-  progressDeadlineSeconds: 600
+  progressDeadlineSeconds: 900
   minReadySeconds: 10
   selector:
     matchLabels:
@@ -30,17 +30,19 @@ spec:
           readinessProbe:
             httpGet:
               path: /
-              port: http
-            initialDelaySeconds: 5
+              port: 80
+            initialDelaySeconds: 15
             periodSeconds: 10
-            timeoutSeconds: 3
+            timeoutSeconds: 5
+            failureThreshold: 6
           livenessProbe:
             httpGet:
               path: /
-              port: http
-            initialDelaySeconds: 30
+              port: 80
+            initialDelaySeconds: 40
             periodSeconds: 20
-            timeoutSeconds: 3
+            timeoutSeconds: 5
+            failureThreshold: 6
           resources:
             requests:
               cpu: "25m"

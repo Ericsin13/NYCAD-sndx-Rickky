@@ -16,7 +16,7 @@ env:
   FRONTEND_REPO: nycad-frontend-repo
   EKS_CLUSTER: ${{ secrets.EKS_CLUSTER }}
   K8S_NAMESPACE: nycad-app
-  k8S_MANIFEST_DIR: k8s/frontend
+  K8S_MANIFEST_DIR: k8s/frontend
 
 jobs:
   build-test-push-frontend:
@@ -107,12 +107,12 @@ jobs:
       - name: Apply namespace and manifests
         run: |
           kubectl create namespace $K8S_NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
-          kubectl apply -f ${{ env.k8S_MANIFEST_DIR }}/frontend-deployment.yaml -n ${{ env.K8S_NAMESPACE }}
-          kubectl apply -f ${{ env.k8S_MANIFEST_DIR }}/frontend-service.yaml -n ${{ env.K8S_NAMESPACE }}
-          kubectl apply -f ${{ env.k8S_MANIFEST_DIR }}/ingress.yaml -n ${{ env.K8S_NAMESPACE }}
+          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/frontend-deployment.yaml -n ${{ env.K8S_NAMESPACE }}
+          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/frontend-service.yaml -n ${{ env.K8S_NAMESPACE }}
+          kubectl apply -f ${{ env.K8S_MANIFEST_DIR }}/ingress.yaml -n ${{ env.K8S_NAMESPACE }}
 
       - name: Verify rollout
         run: |
           set -e
           kubectl rollout restart deployment frontend-deployment -n ${{ env.K8S_NAMESPACE }}
-          kubectl -n ${{ env.K8S_NAMESPACE }} rollout status deployment/frontend-deployment --timeout=600s 
+          kubectl -n ${{ env.K8S_NAMESPACE }} rollout status deployment/frontend-deployment --timeout=900s 
