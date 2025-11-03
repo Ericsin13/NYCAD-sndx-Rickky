@@ -105,6 +105,10 @@ jobs:
       - name: Update kubeconfig for EKS cluster
         run: aws eks update-kubeconfig --region $AWS_REGION --name ${{ env.EKS_CLUSTER }}
 
+      - name: Replace ECR placeholder in manifest
+        run: |
+          sed -i "s|<AWS_ACCOUNT_ID>|${{ secrets.AWS_ACCOUNT_ID }}|g" ${{ env.K8S_MANIFEST_DIR }}/backend-deployment.yaml
+
       - name: Create or update DB secret and deploy backend
         run: |
           kubectl create namespace ${{ env.K8S_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
