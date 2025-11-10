@@ -8,8 +8,6 @@ on:
     paths:
       - 'backend/**'
       - '.github/workflows/nycad-backendbuild.yml'
-  schedule:
-      - cron: '* 3 * * *'
   workflow_dispatch:
 
 env:
